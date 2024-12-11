@@ -1,88 +1,65 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
-from yt_dlp import YoutubeDL
-import os
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+import requests
 
-# Папка для збереження файлів
-DOWNLOAD_FOLDER = "downloads"
-os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+# Вкажіть свій токен бота
+BOT_TOKEN = "7924938712:AAGCR1AsJCBiDEJhRmV0u75uMMaiiO24AGs"
 
-# Токен вашого бота
-BOT_TOKEN = "7924938712:AAEur9ZZSoZ5lLh3k8jId9a9YeLGcblxGSM"
+# Параметри RapidAPI
+RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
+RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
+RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
-async def start(update: Update, context):
-    """Обробляє команду /start."""
-    await update.message.reply_text("Привіт! Надішліть мені посилання на YouTube або TikTok відео.")
+async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробляє посилання на відео і завантажує його"""
+    url = update.message.text.strip()
 
-async def process_link(update: Update, context):
-    """Обробляє посилання на відео."""
-    url = update.message.text
-
-    try:
-        options = {"listformats": True}
-        with YoutubeDL(options) as ydl:
-            info = ydl.extract_info(url, download=False)
-            formats = [
-                {
-                    "format_id": f["format_id"],
-                    "resolution": f.get("resolution", "audio only"),
-                    "ext": f["ext"],
-                }
-                for f in info.get("formats", [])
-            ]
-
-        # Генеруємо кнопки для вибору формату
-        keyboard = [
-            [InlineKeyboardButton(f"{f['resolution']} ({f['ext']})", callback_data=f['format_id'])]
-            for f in formats
-        ]
-
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
-            "Оберіть формат для завантаження:", reply_markup=reply_markup
-        )
-        context.user_data["url"] = url
-    except Exception as e:
-        await update.message.reply_text(f"Сталася помилка: {str(e)}")
-
-async def download_video(update: Update, context):
-    """Завантажує вибране відео."""
-    query = update.callback_query
-    await query.answer()
-    format_id = query.data
-    url = context.user_data.get("url")
-
-    if not url or not format_id:
-        await query.edit_message_text("Сталася помилка. Спробуйте знову.")
+    # Перевірка на коректність посилання
+    if not (url.startswith("https://www.tiktok.com/") or url.startswith("https://vm.tiktok.com/")):
+        await update.message.reply_text("Будь ласка, надішліть дійсне посилання на TikTok.")
         return
 
     try:
-        # Завантажуємо відео
-        options = {
-            "format": format_id,
-            "outtmpl": os.path.join(DOWNLOAD_FOLDER, "%(title)s.%(ext)s"),
+        # Дані для запиту
+        payload = {"url": url}
+        headers = {
+            "x-rapidapi-key": RAPIDAPI_KEY,
+            "x-rapidapi-host": RAPIDAPI_HOST,
+            "Content-Type": "application/json",
         }
-        with YoutubeDL(options) as ydl:
-            info = ydl.extract_info(url, download=True)
-            file_path = ydl.prepare_filename(info)
 
-        # Відправляємо файл користувачу
-        await query.edit_message_text("Завантаження завершено! Відправляю файл...")
-        await query.message.reply_document(open(file_path, "rb"))
-        os.remove(file_path)  # Видаляємо файл після відправки
+        # Виконання запиту до RapidAPI
+        response = requests.post(RAPIDAPI_URL, json=payload, headers=headers)
+        response_data = response.json()
+
+        # Логування відповіді для діагностики
+        print("API Response:", response_data)
+
+        # Перевірка на успішність запиту
+        if response.status_code == 200 and "medias" in response_data:
+            medias = response_data["medias"]
+            video_url = next((media["url"] for media in medias if media["extension"] == "mp4"), None)
+
+            if video_url:
+                await update.message.reply_video(video_url, caption="Ось ваше відео з TikTok!")
+            else:
+                await update.message.reply_text("На жаль, не вдалося знайти відео.")
+        else:
+            error_message = response_data.get("message", "Не вдалося завантажити відео.")
+            await update.message.reply_text(f"Помилка: {error_message}")
     except Exception as e:
-        await query.edit_message_text(f"Сталася помилка під час завантаження: {str(e)}")
-
-def main():
-    """Запуск бота."""
-    app = Application.builder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_link))
-    app.add_handler(CallbackQueryHandler(download_video))
-
-    print("Бот запущено...")
-    app.run_polling()
+        await update.message.reply_text(
+            f"Сталася помилка при завантаженні відео: {e}"
+        )
 
 if __name__ == "__main__":
-    main()
+    # Створення додатку
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    # Обробники команд
+    # Видалено обробник для команди /start
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
+
+    # Запуск бота
+    print("Бот запущено...")
+    app.run_polling()
