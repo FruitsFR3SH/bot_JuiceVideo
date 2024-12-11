@@ -3,7 +3,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 import requests
 
 # Вкажіть свій токен бота
-BOT_TOKEN = "7801596549:AAFpGUCbplKQgnCKCKxq103j1O3OLUBU7DQ"
+BOT_TOKEN = "7801596549:AAGv39K8HhEOTN6jf5dEs74lBT3qkJ083IE"
 
 # Параметри RapidAPI
 RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
