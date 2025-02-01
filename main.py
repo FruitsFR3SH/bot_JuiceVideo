@@ -1,61 +1,98 @@
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 import requests
-import json
-from telegram import Bot, Update
-from telegram.ext import CommandHandler, MessageHandler, filters, ApplicationBuilder
 
-# Токен вашого Telegram-бота
-token = "token"
-bot = Bot(token)
+# Вкажіть свій токен бота
+BOT_TOKEN = "7801596549:AAGv39K8HhEOTN6jf5dEs74lBT3qkJ083IE"
 
-# Дані API
-API_HOST = "https://social-download-all-in-one.p.rapidapi.com/v1/social/autolink"
-API_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
+# Параметри RapidAPI
+RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
+RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
+RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
-# Функція для отримання відео
-def get_video_data(video_url):
-    headers = {
-        'x-rapidapi-key': API_KEY,
-        'x-rapidapi-host': "social-download-all-in-one.p.rapidapi.com",
-        'Content-Type': "application/json"
-    }
-    payload = json.dumps({"url": video_url})
-    response = requests.post(API_HOST, data=payload, headers=headers)
-    return response.json()
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Початкове повідомлення з кнопками та зображенням"""
+    # Надсилаємо зображення з описом
+    image_url = "https://uainet.net/wp-content/uploads/2021/06/tekhnichni-roboty.jpg"
+    caption = "Перед тим як почати користуватись ботом ви повинні підписатись на наші спонсорські канали."
 
-# Обробник команди /start
-async def start(update: Update, context):
-    await update.message.reply_text("Відправ мені посилання на відео, і я знайду його для тебе!")
+    # Створення кнопок
+    keyboard = [
+        [
+            InlineKeyboardButton("Спонсорський бот", url="https://example.com"),
+            InlineKeyboardButton("Спонсорський канал", url="https://example.com"),
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-# Обробник повідомлень із посиланнями
-async def send_video(update: Update, context):
-    video_url = update.message.text
-    await update.message.reply_text("Зачекай, шукаю відео...")
-    video_data = get_video_data(video_url)
-    
-    if video_data.get("error"):
-        await update.message.reply_text("Не вдалося отримати відео. Спробуй інше посилання!")
+    # Надсилаємо зображення та кнопки
+    await update.message.reply_photo(photo=image_url, caption=caption, reply_markup=reply_markup)
+
+async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробка вибору спонсора"""
+    query = update.callback_query
+    await query.answer()
+
+    choice = query.data
+    if choice == "bot":
+        await query.edit_message_text("Ви вибрали Спонсорський бот. Тепер ви можете надсилати посилання для завантаження відео.")
+    elif choice == "channel":
+        await query.edit_message_text("Ви вибрали Спонсорський канал. Тепер ви можете надсилати посилання для завантаження відео.")
+
+    # Далі переходить до функції завантаження відео
+    await query.message.reply_text("Надішліть посилання на відео з TikTok, і я завантажу його для вас.")
+
+async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробляє посилання на відео і завантажує його"""
+    url = update.message.text.strip()
+
+    # Перевірка на коректність посилання
+    if not (url.startswith("https://www.tiktok.com/") or url.startswith("https://vm.tiktok.com/")):
+        await update.message.reply_text("Будь ласка, надішліть дійсне посилання на TikTok.")
         return
-    
-    title = video_data.get("title", "Без назви")
-    author = video_data.get("author", "Невідомий автор")
-    thumbnail = video_data.get("thumbnail")
-    medias = video_data.get("medias", [])
-    
-    if not medias:
-        await update.message.reply_text("Не вдалося знайти медіафайли для цього відео.")
-        return
-    
-    video_url = medias[0].get("url")  # Беремо перше доступне відео
-    quality = medias[0].get("quality", "Невідомо")
-    
-    response_text = f"🎬 *{title}*\n👤 {author}\n📺 Якість: {quality}\n\n[🔗 Завантажити відео]({video_url})"
-    
-    await bot.send_photo(update.message.chat.id, thumbnail, caption=response_text, parse_mode="Markdown")
 
-# Налаштування бота
-app = ApplicationBuilder().token(token).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_video))
+    try:
+        # Дані для запиту
+        payload = {"url": url}
+        headers = {
+            "x-rapidapi-key": RAPIDAPI_KEY,
+            "x-rapidapi-host": RAPIDAPI_HOST,
+            "Content-Type": "application/json",
+        }
 
-# Запуск бота
-app.run_polling()
+        # Виконання запиту до RapidAPI
+        response = requests.post(RAPIDAPI_URL, json=payload, headers=headers)
+        response_data = response.json()
+
+        # Логування відповіді для діагностики
+        print("API Response:", response_data)
+
+        # Перевірка на успішність запиту
+        if response.status_code == 200 and "medias" in response_data:
+            medias = response_data["medias"]
+            video_url = next((media["url"] for media in medias if media["extension"] == "mp4"), None)
+
+            if video_url:
+                await update.message.reply_video(video_url, caption="Ось ваше відео з TikTok!")
+            else:
+                await update.message.reply_text("На жаль, не вдалося знайти відео.")
+        else:
+            error_message = response_data.get("message", "Не вдалося завантажити відео.")
+            await update.message.reply_text(f"Помилка: {error_message}")
+    except Exception as e:
+        await update.message.reply_text(
+            f"Сталася помилка при завантаженні відео: {e}"
+        )
+
+if __name__ == "__main__":
+    # Створення додатку
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    # Обробники команд
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
+    app.add_handler(MessageHandler(filters.CallbackQuery, handle_sponsor_choice))
+
+    # Запуск бота
+    print("Бот запущено...")
+    app.run_polling()
