@@ -1,69 +1,47 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 import requests
 
 # Вкажіть свій токен бота
-BOT_TOKEN = "7141362441:AAFm-ckIy2L51KHzgZ_w3USxMVW9Oo8NM3Q"
+BOT_TOKEN = "7801596549:AAGv39K8HhEOTN6jf5dEs74lBT3qkJ083IE"
 
 # Параметри RapidAPI
 RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
 RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
-# Словник для відстеження вибору спонсорських кнопок
-sponsor_choices = {}
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Привітання користувача та показ кнопок спонсора"""
+# Ваша логіка для перевірки підписок
+async def check_subscriptions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Перевірка підписок на канал та бота"""
+    # Запит на перевірку підписок
+    user_id = update.message.from_user.id
+    # Приклад перевірки підписок
+    # Тут має бути ваша логіка для перевірки підписки на канал або бота
+    # Можна використати Telegram API для перевірки підписки
+    is_subscribed_to_channel = True  # Псевдоперевірка
+    if not is_subscribed_to_channel:
+        await update.message.reply_text("Ви повинні підписатись на спонсорський канал, щоб продовжити!")
+        return
+    
+    # Надсилаємо зображення з описом перед кнопками
+    photo_url = "https://uainet.net/wp-content/uploads/2021/06/tekhnichni-roboty.jpg"
+    caption = "Перед тим як почати користуватись ботом, ви повинні підписатись на наші спонсорські канали."
     keyboard = [
-        [InlineKeyboardButton("Спонсорський бот", callback_data="sponsor_bot")],
-        [InlineKeyboardButton("Спонсорський канал", callback_data="sponsor_channel")]
+        [
+            InlineKeyboardButton("Спонсорський бот", url="https://t.me/your_sponsor_bot"),
+            InlineKeyboardButton("Спонсорський канал", url="https://t.me/your_sponsor_channel")
+        ],
+        [
+            InlineKeyboardButton("Перевірити підписки", callback_data="check_subscriptions")
+        ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Надсилаємо зображення та кнопки
-    await update.message.reply_photo(
-        photo="https://uainet.net/wp-content/uploads/2021/06/tekhnichni-roboty.jpg",
-        caption="Перед тим як почати користуватись ботом ви повинні підписатись на наші спонсорські канали",
-        reply_markup=reply_markup
-    )
-
-    # Ініціалізація для користувача в sponsor_choices
-    sponsor_choices[update.message.from_user.id] = set()
-
-async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробка вибору спонсора"""
-    query = update.callback_query
-    await query.answer()
-
-    user_id = query.from_user.id
-
-    # Збереження вибору користувача
-    sponsor_choices[user_id].add(query.data)
-
-    # Логування для перевірки
-    print(f"User {user_id} clicked: {query.data}")
-    print("User sponsor choices:", sponsor_choices[user_id])
-
-    # Відкриття посилання відповідно до натиснутої кнопки
-    if query.data == "sponsor_bot":
-        await query.edit_message_text("Ви натиснули кнопку 'Спонсорський бот'. Перейдіть за посиланням: https://example.com/bot")
-    elif query.data == "sponsor_channel":
-        await query.edit_message_text("Ви натиснули кнопку 'Спонсорський канал'. Перейдіть за посиланням: https://example.com/channel")
-
-    # Перевірка, чи натиснуті обидві кнопки
-    if len(sponsor_choices[user_id]) == 2:
-        await query.edit_message_text("Ви підписалися на всі спонсорські канали! Тепер ви можете надсилати посилання для завантаження відео.")
+    # Надсилаємо зображення з текстом
+    await update.message.reply_photo(photo=photo_url, caption=caption, reply_markup=reply_markup)
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
-    user_id = update.message.from_user.id
-
-    # Перевірка, чи користувач вибрав обидві кнопки
-    if len(sponsor_choices.get(user_id, set())) != 2:
-        await update.message.reply_text("Ви повинні підписатися на всі спонсорські канали перед завантаженням відео.")
-        return
-
     url = update.message.text.strip()
 
     # Перевірка на коректність посилання
@@ -109,9 +87,9 @@ if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     # Обробники команд
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_sponsor_choice))
+    # Видалено обробник для команди /start
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
+    app.add_handler(CommandHandler("start", check_subscriptions))  # Викликаємо функцію перевірки підписок
 
     # Запуск бота
     print("Бот запущено...")
