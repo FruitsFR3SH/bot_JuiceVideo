@@ -10,10 +10,15 @@ RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
 RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
+# Змінна для збереження стану натискання кнопок
+user_subscription_status = {}
+
 # Функція перевірки підписки
 async def check_subscriptions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Надсилає зображення і кнопки для перевірки підписок"""
     user_id = update.message.from_user.id
+    user_subscription_status[user_id] = {'bot': False, 'channel': False}
+
     keyboard = [
         [
             InlineKeyboardButton("Спонсорський бот", url="https://t.me/your_sponsor_bot"),
@@ -37,20 +42,32 @@ async def handle_subscription_check(update: Update, context: ContextTypes.DEFAUL
     query = update.callback_query
     await query.answer()
 
-    # Перевірка підписки на канал (замість цього потрібно реалізувати вашу перевірку)
     user_id = query.from_user.id
-    # Приклад перевірки підписки на канал:
-    try:
-        # Приклад перевірки підписки на канал
-        # Використовуємо API для перевірки підписки
-        is_subscribed = True  # Це має бути реальна перевірка через API Telegram
-        if is_subscribed:
+    
+    # Перевірка, чи натиснуті обидві кнопки
+    if user_subscription_status.get(user_id):
+        # Якщо натиснуті обидві кнопки, даємо дозвіл на завантаження
+        if user_subscription_status[user_id]['bot'] and user_subscription_status[user_id]['channel']:
             await query.edit_message_text("Підписка підтверджена! Тепер ви можете завантажувати відео.")
             await query.message.reply_text("Надішліть посилання на відео, яке хочете завантажити.")
         else:
-            await query.edit_message_text("Ви не підписались на канал. Будь ласка, підпишіться і спробуйте ще раз.")
-    except Exception as e:
-        await query.edit_message_text(f"Сталася помилка при перевірці підписки: {e}")
+            await query.edit_message_text("Ви не натиснули на обидві спонсорські кнопки. Будь ласка, спробуйте ще раз.")
+    else:
+        await query.edit_message_text("Сталася помилка. Спробуйте ще раз.")
+
+# Обробник натискання кнопки спонсорського бота
+async def handle_bot_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробка натискання кнопки спонсорського бота"""
+    user_id = update.callback_query.from_user.id
+    user_subscription_status[user_id]['bot'] = True
+    await update.callback_query.answer("Ви натиснули на спонсорський бот!")
+
+# Обробник натискання кнопки спонсорського каналу
+async def handle_channel_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробка натискання кнопки спонсорського каналу"""
+    user_id = update.callback_query.from_user.id
+    user_subscription_status[user_id]['channel'] = True
+    await update.callback_query.answer("Ви натиснули на спонсорський канал!")
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
@@ -101,6 +118,8 @@ if __name__ == "__main__":
     # Обробники команд
     app.add_handler(CommandHandler("start", check_subscriptions))  # Викликаємо функцію перевірки підписок
     app.add_handler(CallbackQueryHandler(handle_subscription_check, pattern="check_subscriptions"))
+    app.add_handler(CallbackQueryHandler(handle_bot_click, pattern="Спонсорський бот"))
+    app.add_handler(CallbackQueryHandler(handle_channel_click, pattern="Спонсорський канал"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
 
     # Запуск бота
