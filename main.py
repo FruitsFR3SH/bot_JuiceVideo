@@ -3,10 +3,10 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 import requests
 
 # Вкажіть свій токен бота
-BOT_TOKEN = "YOUR_BOT_TOKEN"
+BOT_TOKEN = "7141362441:AAFm-ckIy2L51KHzgZ_w3USxMVW9Oo8NM3Q"
 
 # Параметри RapidAPI
-RAPIDAPI_KEY = "YOUR_RAPIDAPI_KEY"
+RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
 RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
