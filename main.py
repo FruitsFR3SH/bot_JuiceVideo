@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, CallbackQueryHandler
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 import requests
 
 # Вкажіть свій токен бота
@@ -16,8 +16,8 @@ sponsor_choices = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Привітання користувача та показ кнопок спонсора"""
     keyboard = [
-        [InlineKeyboardButton("Спонсорський бот", url="https://exemple.com")],
-        [InlineKeyboardButton("Спонсорський канал", url="https://exemple.com")]
+        [InlineKeyboardButton("Спонсорський бот", callback_data="bot")],
+        [InlineKeyboardButton("Спонсорський канал", callback_data="channel")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -28,7 +28,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
-    # Встановлюємо ініціалізацію для користувача в словнику sponsor_choices
+    # Ініціалізація для користувача в sponsor_choices
     sponsor_choices[update.message.from_user.id] = set()
 
 async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -38,23 +38,17 @@ async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TY
 
     user_id = query.from_user.id
 
-    # Збереження натискання користувача в словнику sponsor_choices
-    choice = query.data
-    if user_id not in sponsor_choices:
-        sponsor_choices[user_id] = set()
+    # Збереження вибору користувача
+    sponsor_choices[user_id].add(query.data)
 
-    sponsor_choices[user_id].add(choice)
-
-    # Логування для перевірки, що зберігається в sponsor_choices
-    print(f"User {user_id} clicked: {choice}")
+    # Логування для перевірки
+    print(f"User {user_id} clicked: {query.data}")
     print("User sponsor choices:", sponsor_choices[user_id])
 
     # Перевірка, чи натиснуті обидві кнопки
     if len(sponsor_choices[user_id]) == 2:
-        # Обидві кнопки натиснуті, дозволяємо завантаження відео
         await query.edit_message_text("Ви підписалися на всі спонсорські канали! Тепер ви можете надсилати посилання для завантаження відео.")
     else:
-        # Якщо не всі кнопки натиснуті, чекаємо
         await query.edit_message_text("Будь ласка, підпишіться на всі спонсорські канали, щоб почати користуватися ботом.")
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -62,7 +56,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
     # Перевірка, чи користувач вибрав обидві кнопки
-    if user_id not in sponsor_choices or len(sponsor_choices[user_id]) != 2:
+    if len(sponsor_choices.get(user_id, set())) != 2:
         await update.message.reply_text("Ви повинні підписатися на всі спонсорські канали перед завантаженням відео.")
         return
 
