@@ -1,7 +1,7 @@
 import requests
 import json
 from telegram import Bot, Update
-from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
+from telegram.ext import CommandHandler, MessageHandler, filters, ApplicationBuilder
 
 # Токен вашого Telegram-бота
 token = "7696258601:AAFIOfaGiIU7_o6XFeqt1r6HmIIrY6goW6o"
@@ -23,17 +23,17 @@ def get_video_data(video_url):
     return response.json()
 
 # Обробник команди /start
-def start(update: Update, context):
-    update.message.reply_text("Відправ мені посилання на відео, і я знайду його для тебе!")
+async def start(update: Update, context):
+    await update.message.reply_text("Відправ мені посилання на відео, і я знайду його для тебе!")
 
 # Обробник повідомлень із посиланнями
-def send_video(update: Update, context):
+async def send_video(update: Update, context):
     video_url = update.message.text
-    update.message.reply_text("Зачекай, шукаю відео...")
+    await update.message.reply_text("Зачекай, шукаю відео...")
     video_data = get_video_data(video_url)
     
     if video_data.get("error"):
-        update.message.reply_text("Не вдалося отримати відео. Спробуй інше посилання!")
+        await update.message.reply_text("Не вдалося отримати відео. Спробуй інше посилання!")
         return
     
     title = video_data.get("title", "Без назви")
@@ -42,7 +42,7 @@ def send_video(update: Update, context):
     medias = video_data.get("medias", [])
     
     if not medias:
-        update.message.reply_text("Не вдалося знайти медіафайли для цього відео.")
+        await update.message.reply_text("Не вдалося знайти медіафайли для цього відео.")
         return
     
     video_url = medias[0].get("url")  # Беремо перше доступне відео
@@ -50,14 +50,12 @@ def send_video(update: Update, context):
     
     response_text = f"🎬 *{title}*\n👤 {author}\n📺 Якість: {quality}\n\n[🔗 Завантажити відео]({video_url})"
     
-    bot.send_photo(update.message.chat.id, thumbnail, caption=response_text, parse_mode="Markdown")
+    await bot.send_photo(update.message.chat.id, thumbnail, caption=response_text, parse_mode="Markdown")
 
 # Налаштування бота
-updater = Updater(token, use_context=True)
-dp = updater.dispatcher
-dp.add_handler(CommandHandler("start", start))
-dp.add_handler(MessageHandler(Filters.text & ~Filters.command, send_video))
+app = ApplicationBuilder().token(token).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_video))
 
 # Запуск бота
-updater.start_polling()
-updater.idle()
+app.run_polling()
