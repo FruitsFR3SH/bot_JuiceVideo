@@ -10,14 +10,40 @@ RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
 RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
-# Словник для відстеження вибору спонсорських кнопок
+# Словник для відстеження підписок користувачів
 sponsor_choices = {}
+
+# Дані про спонсорські ресурси
+SPONSORS = {
+    'bot': {
+        'url': 'https://example.com/bot',
+        'chat_id': '@your_bot_username'  # Замініть на username вашого бота
+    },
+    'channel': {
+        'url': 'https://example.com/channel',
+        'chat_id': '@your_channel_username'  # Замініть на username вашого каналу
+    }
+}
+
+async def check_subscription(user_id: int, chat_id: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Перевіряє чи підписаний користувач на канал/бота"""
+    try:
+        member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+        return member.status in ['member', 'administrator', 'creator']
+    except Exception:
+        return False
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Привітання користувача та показ кнопок спонсора"""
     keyboard = [
-        [InlineKeyboardButton("Спонсорський бот", url="https://example.com/bot")],
-        [InlineKeyboardButton("Спонсорський канал", url="https://example.com/channel")]
+        [
+            InlineKeyboardButton("Спонсорський бот", url=SPONSORS['bot']['url']),
+            InlineKeyboardButton("✅ Перевірити підписку на бота", callback_data='check_bot')
+        ],
+        [
+            InlineKeyboardButton("Спонсорський канал", url=SPONSORS['channel']['url']),
+            InlineKeyboardButton("✅ Перевірити підписку на канал", callback_data='check_channel')
+        ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -32,32 +58,49 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sponsor_choices[update.message.from_user.id] = set()
 
 async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробка вибору спонсора"""
+    """Обробка перевірки підписки"""
     query = update.callback_query
     await query.answer()
-
+    
     user_id = query.from_user.id
+    
+    if query.data == 'check_bot':
+        is_subscribed = await check_subscription(user_id, SPONSORS['bot']['chat_id'], context)
+        if is_subscribed:
+            sponsor_choices[user_id].add('bot')
+    elif query.data == 'check_channel':
+        is_subscribed = await check_subscription(user_id, SPONSORS['channel']['chat_id'], context)
+        if is_subscribed:
+            sponsor_choices[user_id].add('channel')
 
-    # Збереження вибору користувача
-    sponsor_choices[user_id].add(query.data)
-
-    # Логування для перевірки
-    print(f"User {user_id} clicked: {query.data}")
-    print("User sponsor choices:", sponsor_choices[user_id])
-
-    # Перевірка, чи натиснуті обидві кнопки
-    if len(sponsor_choices[user_id]) == 2:
-        await query.edit_message_text("Ви підписалися на всі спонсорські канали! Тепер ви можете надсилати посилання для завантаження відео.")
+    # Перевірка всіх підписок
+    if len(sponsor_choices.get(user_id, set())) == 2:
+        await query.edit_message_caption(
+            caption="Дякуємо за підписку! Тепер ви можете надсилати посилання для завантаження відео."
+        )
     else:
-        await query.edit_message_text("Будь ласка, підпишіться на всі спонсорські канали, щоб почати користуватися ботом.")
+        missing = []
+        if 'bot' not in sponsor_choices.get(user_id, set()):
+            missing.append("бота")
+        if 'channel' not in sponsor_choices.get(user_id, set()):
+            missing.append("канал")
+        
+        await query.edit_message_caption(
+            caption=f"Будь ласка, підпишіться на {' та '.join(missing)} і натисніть відповідні кнопки перевірки."
+        )
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
     user_id = update.message.from_user.id
 
-    # Перевірка, чи користувач вибрав обидві кнопки
-    if len(sponsor_choices.get(user_id, set())) != 2:
-        await update.message.reply_text("Ви повинні підписатися на всі спонсорські канали перед завантаженням відео.")
+    # Перевірка підписок перед завантаженням
+    is_bot_subscribed = await check_subscription(user_id, SPONSORS['bot']['chat_id'], context)
+    is_channel_subscribed = await check_subscription(user_id, SPONSORS['channel']['chat_id'], context)
+
+    if not (is_bot_subscribed and is_channel_subscribed):
+        await update.message.reply_text(
+            "Ви повинні підписатися на всі спонсорські канали перед завантаженням відео. Використайте /start щоб побачити кнопки підписки."
+        )
         return
 
     url = update.message.text.strip()
@@ -79,9 +122,6 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Виконання запиту до RapidAPI
         response = requests.post(RAPIDAPI_URL, json=payload, headers=headers)
         response_data = response.json()
-
-        # Логування відповіді для діагностики
-        print("API Response:", response_data)
 
         # Перевірка на успішність запиту
         if response.status_code == 200 and "medias" in response_data:
