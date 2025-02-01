@@ -10,9 +10,6 @@ RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
 RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
-# Словник для відстеження підписок користувачів
-verified_users = set()
-
 # Дані про спонсорські ресурси
 SPONSORS = {
     'bot': {
@@ -25,10 +22,8 @@ SPONSORS = {
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Привітання користувача та показ кнопок спонсора"""
-    user_id = update.message.from_user.id
-    # При старті видаляємо користувача зі списку верифікованих
-    if user_id in verified_users:
-        verified_users.remove(user_id)
+    # Скидаємо статус верифікації при старті
+    context.user_data['verified'] = False
     
     keyboard = [
         [InlineKeyboardButton("Спонсорський бот", url=SPONSORS['bot']['url'])],
@@ -46,16 +41,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробка перевірки підписок"""
     query = update.callback_query
-    user_id = query.from_user.id
     
     if query.data == 'check_all':
-        # Додаємо користувача до верифікованих
-        verified_users.add(user_id)
+        # Встановлюємо статус верифікації
+        context.user_data['verified'] = True
         
         # Видаляємо повідомлення з кнопками і надсилаємо підтвердження
         await query.message.delete()
         await context.bot.send_message(
-            chat_id=user_id,
+            chat_id=query.from_user.id,
             text="✅ Дякуємо за підписку! Тепер ви можете надсилати посилання для завантаження відео."
         )
     
@@ -63,12 +57,16 @@ async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
-    user_id = update.message.from_user.id
-    
-    # Перевіряємо чи користувач верифікований
-    if user_id not in verified_users:
+    # Перевіряємо статус верифікації
+    if not context.user_data.get('verified', False):
+        keyboard = [
+            [InlineKeyboardButton("Почати", callback_data='start')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await update.message.reply_text(
-            "Ви повинні спочатку підписатися на спонсорські канали та натиснути кнопку перевірки. Використайте /start для отримання інструкцій."
+            "Ви повинні спочатку підписатися на спонсорські канали. Натисніть кнопку 'Почати':",
+            reply_markup=reply_markup
         )
         return
 
@@ -109,6 +107,14 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Сталася помилка при завантаженні відео: {e}"
         )
 
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробка натискання кнопки 'Почати'"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == 'start':
+        await start(update, context)
+
 if __name__ == "__main__":
     # Створення додатку
     app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -116,6 +122,7 @@ if __name__ == "__main__":
     # Обробники команд
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_sponsor_choice))
+    app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
 
     # Запуск бота
