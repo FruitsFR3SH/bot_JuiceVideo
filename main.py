@@ -19,8 +19,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Створення кнопок
     keyboard = [
         [
-            InlineKeyboardButton("Спонсорський бот", url="https://example.com"),
-            InlineKeyboardButton("Спонсорський канал", url="https://example.com"),
+            InlineKeyboardButton("Спонсорський бот", callback_data="bot"),
+            InlineKeyboardButton("Спонсорський канал", callback_data="channel"),
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -33,17 +33,34 @@ async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
 
+    # Збереження натискання користувача в user_data
+    user_data = context.user_data
     choice = query.data
-    if choice == "bot":
-        await query.edit_message_text("Ви вибрали Спонсорський бот. Тепер ви можете надсилати посилання для завантаження відео.")
-    elif choice == "channel":
-        await query.edit_message_text("Ви вибрали Спонсорський канал. Тепер ви можете надсилати посилання для завантаження відео.")
 
-    # Далі переходить до функції завантаження відео
+    if "sponsor_choice" not in user_data:
+        user_data["sponsor_choice"] = set()
+
+    user_data["sponsor_choice"].add(choice)
+
+    # Перевірка, чи натиснуті обидві кнопки
+    if len(user_data["sponsor_choice"]) == 2:
+        # Обидві кнопки натиснуті, дозволяємо завантаження відео
+        await query.edit_message_text("Ви підписалися на всі спонсорські канали! Тепер ви можете надсилати посилання для завантаження відео.")
+    else:
+        # Якщо не всі кнопки натиснуті, чекаємо
+        await query.edit_message_text("Будь ласка, підпишіться на всі спонсорські канали, щоб почати користуватися ботом.")
+
+    # Повідомлення для користувача
     await query.message.reply_text("Надішліть посилання на відео з TikTok, і я завантажу його для вас.")
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
+    # Перевірка, чи користувач вибрав обидві кнопки
+    user_data = context.user_data
+    if "sponsor_choice" not in user_data or len(user_data["sponsor_choice"]) != 2:
+        await update.message.reply_text("Ви повинні підписатися на всі спонсорські канали перед завантаженням відео.")
+        return
+
     url = update.message.text.strip()
 
     # Перевірка на коректність посилання
