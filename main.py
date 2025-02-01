@@ -20,8 +20,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [
-            InlineKeyboardButton("Спонсорський бот", callback_data="bot"),
-            InlineKeyboardButton("Спонсорський канал", callback_data="channel")
+            InlineKeyboardButton("Спонсорський бот", url="https://google.com", callback_data="bot"),
+            InlineKeyboardButton("Спонсорський канал", url="https://google.com", callback_data="channel")
         ],
         [
             InlineKeyboardButton("Перевірити підписки", callback_data="check_subscriptions")
@@ -45,16 +45,16 @@ async def handle_button_click(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if data == "bot":
         user_subscription_status[user_id]['bot'] = True
-        await query.edit_message_text("Ви натиснули на спонсорський бот!")
+        await query.answer("Ви натиснули на спонсорський бот!")
     elif data == "channel":
         user_subscription_status[user_id]['channel'] = True
-        await query.edit_message_text("Ви натиснули на спонсорський канал!")
+        await query.answer("Ви натиснули на спонсорський канал!")
     elif data == "check_subscriptions":
         if user_subscription_status[user_id]['bot'] and user_subscription_status[user_id]['channel']:
             await query.edit_message_text("Підписка підтверджена! Тепер ви можете завантажувати відео.")
             await query.message.reply_text("Надішліть посилання на відео, яке хочете завантажити.")
         else:
-            await query.edit_message_text("Ви не натиснули на обидві спонсорські кнопки. Будь ласка, спробуйте ще раз.")
+            await query.answer("Ви не натиснули на обидві спонсорські кнопки. Будь ласка, спробуйте ще раз.", show_alert=True)
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
