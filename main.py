@@ -10,49 +10,60 @@ RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
 RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
-# Проста база даних в пам'яті
-subscribed_users = {}
+# Словник для відстеження вибору спонсорських кнопок
+sponsor_choices = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    subscribed_users[user_id] = False
-    
+    """Привітання користувача та показ кнопок спонсора"""
     keyboard = [
-        [InlineKeyboardButton("Спонсорський бот", url='https://example.com/bot')],
-        [InlineKeyboardButton("Спонсорський канал", url='https://example.com/channel')],
-        [InlineKeyboardButton("✅ Перевірити підписки", callback_data='verify')]
+        [InlineKeyboardButton("Спонсорський бот", callback_data="sponsor_bot")],
+        [InlineKeyboardButton("Спонсорський канал", callback_data="sponsor_channel")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
+    # Надсилаємо зображення та кнопки
     await update.message.reply_photo(
         photo="https://uainet.net/wp-content/uploads/2021/06/tekhnichni-roboty.jpg",
-        caption="Підпишіться на наші канали та натисніть кнопку перевірки",
+        caption="Перед тим як почати користуватись ботом ви повинні підписатись на наші спонсорські канали",
         reply_markup=reply_markup
     )
 
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Ініціалізація для користувача в sponsor_choices
+    sponsor_choices[update.message.from_user.id] = set()
+
+async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробка вибору спонсора"""
     query = update.callback_query
-    user_id = query.from_user.id
-    
-    if query.data == 'verify':
-        subscribed_users[user_id] = True
-        await query.message.delete()
-        await context.bot.send_message(
-            chat_id=user_id,
-            text="✅ Тепер ви можете надсилати посилання для завантаження відео"
-        )
     await query.answer()
 
+    user_id = query.from_user.id
+
+    # Збереження вибору користувача
+    sponsor_choices[user_id].add(query.data)
+
+    # Логування для перевірки
+    print(f"User {user_id} clicked: {query.data}")
+    print("User sponsor choices:", sponsor_choices[user_id])
+
+    # Відкриття посилання відповідно до натиснутої кнопки
+    if query.data == "sponsor_bot":
+        await query.edit_message_text("Ви натиснули кнопку 'Спонсорський бот'. Перейдіть за посиланням: https://example.com/bot")
+    elif query.data == "sponsor_channel":
+        await query.edit_message_text("Ви натиснули кнопку 'Спонсорський канал'. Перейдіть за посиланням: https://example.com/channel")
+
+    # Перевірка, чи натиснуті обидві кнопки
+    if len(sponsor_choices[user_id]) == 2:
+        await query.edit_message_text("Ви підписалися на всі спонсорські канали! Тепер ви можете надсилати посилання для завантаження відео.")
+
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробляє посилання на відео і завантажує його"""
     user_id = update.message.from_user.id
-    
-    # Якщо користувача немає в базі або він не підписаний
-    if user_id not in subscribed_users or not subscribed_users[user_id]:
-        await update.message.reply_text(
-            "Спочатку підпишіться на канали! Використайте команду /start"
-        )
+
+    # Перевірка, чи користувач вибрав обидві кнопки
+    if len(sponsor_choices.get(user_id, set())) != 2:
+        await update.message.reply_text("Ви повинні підписатися на всі спонсорські канали перед завантаженням відео.")
         return
-        
+
     url = update.message.text.strip()
 
     # Перевірка на коректність посилання
@@ -69,9 +80,14 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Content-Type": "application/json",
         }
 
+        # Виконання запиту до RapidAPI
         response = requests.post(RAPIDAPI_URL, json=payload, headers=headers)
         response_data = response.json()
 
+        # Логування відповіді для діагностики
+        print("API Response:", response_data)
+
+        # Перевірка на успішність запиту
         if response.status_code == 200 and "medias" in response_data:
             medias = response_data["medias"]
             video_url = next((media["url"] for media in medias if media["extension"] == "mp4"), None)
@@ -84,14 +100,19 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
             error_message = response_data.get("message", "Не вдалося завантажити відео.")
             await update.message.reply_text(f"Помилка: {error_message}")
     except Exception as e:
-        await update.message.reply_text(f"Сталася помилка при завантаженні відео: {e}")
+        await update.message.reply_text(
+            f"Сталася помилка при завантаженні відео: {e}"
+        )
 
 if __name__ == "__main__":
+    # Створення додатку
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-    
+
+    # Обробники команд
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_callback))
+    app.add_handler(CallbackQueryHandler(handle_sponsor_choice))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
-    
+
+    # Запуск бота
     print("Бот запущено...")
     app.run_polling()
