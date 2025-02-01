@@ -16,12 +16,12 @@ sponsor_choices = {}
 # Дані про спонсорські ресурси
 SPONSORS = {
     'bot': {
-        'url': 'https://example.com/bot',
-        'chat_id': '@your_bot_username'  # Замініть на username вашого бота
+        'url': 'https://t.me/kittyverse_ai_bot/play?startapp=u1310633045',
+        'chat_id': '@kittyverse_ai_bot'  # Замініть на username вашого бота
     },
     'channel': {
         'url': 'https://example.com/channel',
-        'chat_id': '@your_channel_username'  # Замініть на username вашого каналу
+        'chat_id': '@save_download_bot'  # Замініть на username вашого каналу
     }
 }
 
