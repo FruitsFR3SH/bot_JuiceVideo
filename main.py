@@ -10,6 +10,9 @@ RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
 RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
+# Словник для відстеження вибору спонсорських кнопок
+sponsor_choices = {}
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Привітання користувача та показ кнопок спонсора"""
     keyboard = [
@@ -25,31 +28,29 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
-    # Встановлюємо "sponsor_choice" для користувача
-    user_data = context.user_data
-    user_data["sponsor_choice"] = set()
+    # Встановлюємо ініціалізацію для користувача в словнику sponsor_choices
+    sponsor_choices[update.message.from_user.id] = set()
 
 async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробка вибору спонсора"""
     query = update.callback_query
     await query.answer()
 
-    # Збереження натискання користувача в user_data
-    user_data = context.user_data
+    user_id = query.from_user.id
+
+    # Збереження натискання користувача в словнику sponsor_choices
     choice = query.data
+    if user_id not in sponsor_choices:
+        sponsor_choices[user_id] = set()
 
-    # Додаємо вибір до списку
-    if "sponsor_choice" not in user_data:
-        user_data["sponsor_choice"] = set()
+    sponsor_choices[user_id].add(choice)
 
-    user_data["sponsor_choice"].add(choice)
-
-    # Логування для перевірки, що зберігається в user_data
-    print(f"User clicked: {choice}")
-    print("User sponsor choices:", user_data["sponsor_choice"])
+    # Логування для перевірки, що зберігається в sponsor_choices
+    print(f"User {user_id} clicked: {choice}")
+    print("User sponsor choices:", sponsor_choices[user_id])
 
     # Перевірка, чи натиснуті обидві кнопки
-    if len(user_data["sponsor_choice"]) == 2:
+    if len(sponsor_choices[user_id]) == 2:
         # Обидві кнопки натиснуті, дозволяємо завантаження відео
         await query.edit_message_text("Ви підписалися на всі спонсорські канали! Тепер ви можете надсилати посилання для завантаження відео.")
     else:
@@ -58,11 +59,10 @@ async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
-    # Перевірка, чи користувач вибрав обидві кнопки
-    user_data = context.user_data
-    print(f"User sponsor choices at video download: {user_data.get('sponsor_choice', set())}")
+    user_id = update.message.from_user.id
 
-    if "sponsor_choice" not in user_data or len(user_data["sponsor_choice"]) != 2:
+    # Перевірка, чи користувач вибрав обидві кнопки
+    if user_id not in sponsor_choices or len(sponsor_choices[user_id]) != 2:
         await update.message.reply_text("Ви повинні підписатися на всі спонсорські канали перед завантаженням відео.")
         return
 
