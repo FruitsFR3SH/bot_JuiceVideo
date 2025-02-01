@@ -45,6 +45,7 @@ async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TY
     user_data["sponsor_choice"].add(choice)
 
     # Логування для перевірки, що зберігається в user_data
+    print(f"User clicked: {choice}")
     print("User sponsor choices:", user_data["sponsor_choice"])
 
     # Перевірка, чи натиснуті обидві кнопки
@@ -59,7 +60,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
     # Перевірка, чи користувач вибрав обидві кнопки
     user_data = context.user_data
-    print("User sponsor choices at video download:", user_data.get("sponsor_choice", set()))
+    print(f"User sponsor choices at video download: {user_data.get('sponsor_choice', set())}")
 
     if "sponsor_choice" not in user_data or len(user_data["sponsor_choice"]) != 2:
         await update.message.reply_text("Ви повинні підписатися на всі спонсорські канали перед завантаженням відео.")
