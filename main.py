@@ -16,11 +16,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     image_url = "https://uainet.net/wp-content/uploads/2021/06/tekhnichni-roboty.jpg"
     caption = "Перед тим як почати користуватись ботом ви повинні підписатись на наші спонсорські канали."
 
-    # Створення кнопок
+    # Створення кнопок з URL
     keyboard = [
         [
-            InlineKeyboardButton("Спонсорський бот", callback_data="bot"),
-            InlineKeyboardButton("Спонсорський канал", callback_data="channel"),
+            InlineKeyboardButton("Спонсорський бот", url="https://example.com/bot"),
+            InlineKeyboardButton("Спонсорський канал", url="https://example.com/channel"),
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
