@@ -1,42 +1,39 @@
-import http.client
+import requests
 import json
-import telebot
+from telegram import Bot, Update
+from telegram.ext import CommandHandler, MessageHandler, Filters, Updater
 
 # Токен вашого Telegram-бота
-token = "7141362441:AAFm-ckIy2L51KHzgZ_w3USxMVW9Oo8NM3Q"
-bot = telebot.TeleBot(token)
+token = "7696258601:AAFIOfaGiIU7_o6XFeqt1r6HmIIrY6goW6o"
+bot = Bot(token)
 
 # Дані API
-API_HOST = "social-download-all-in-one.p.rapidapi.com"
+API_HOST = "https://social-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 API_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
 
 # Функція для отримання відео
 def get_video_data(video_url):
-    conn = http.client.HTTPSConnection(API_HOST)
-    payload = json.dumps({"url": video_url})
     headers = {
         'x-rapidapi-key': API_KEY,
-        'x-rapidapi-host': API_HOST,
+        'x-rapidapi-host': "social-download-all-in-one.p.rapidapi.com",
         'Content-Type': "application/json"
     }
-    conn.request("POST", "/v1/social/autolink", payload, headers)
-    res = conn.getresponse()
-    data = res.read()
-    return json.loads(data.decode("utf-8"))
+    payload = json.dumps({"url": video_url})
+    response = requests.post(API_HOST, data=payload, headers=headers)
+    return response.json()
 
 # Обробник команди /start
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "Відправ мені посилання на відео, і я знайду його для тебе!")
+def start(update: Update, context):
+    update.message.reply_text("Відправ мені посилання на відео, і я знайду його для тебе!")
 
 # Обробник повідомлень із посиланнями
-@bot.message_handler(func=lambda message: message.text.startswith("http"))
-def send_video(message):
-    bot.reply_to(message, "Зачекай, шукаю відео...")
-    video_data = get_video_data(message.text)
+def send_video(update: Update, context):
+    video_url = update.message.text
+    update.message.reply_text("Зачекай, шукаю відео...")
+    video_data = get_video_data(video_url)
     
     if video_data.get("error"):
-        bot.reply_to(message, "Не вдалося отримати відео. Спробуй інше посилання!")
+        update.message.reply_text("Не вдалося отримати відео. Спробуй інше посилання!")
         return
     
     title = video_data.get("title", "Без назви")
@@ -45,7 +42,7 @@ def send_video(message):
     medias = video_data.get("medias", [])
     
     if not medias:
-        bot.reply_to(message, "Не вдалося знайти медіафайли для цього відео.")
+        update.message.reply_text("Не вдалося знайти медіафайли для цього відео.")
         return
     
     video_url = medias[0].get("url")  # Беремо перше доступне відео
@@ -53,7 +50,14 @@ def send_video(message):
     
     response_text = f"🎬 *{title}*\n👤 {author}\n📺 Якість: {quality}\n\n[🔗 Завантажити відео]({video_url})"
     
-    bot.send_photo(message.chat.id, thumbnail, caption=response_text, parse_mode="Markdown")
+    bot.send_photo(update.message.chat.id, thumbnail, caption=response_text, parse_mode="Markdown")
+
+# Налаштування бота
+updater = Updater(token, use_context=True)
+dp = updater.dispatcher
+dp.add_handler(CommandHandler("start", start))
+dp.add_handler(MessageHandler(Filters.text & ~Filters.command, send_video))
 
 # Запуск бота
-bot.polling(none_stop=True)
+updater.start_polling()
+updater.idle()
