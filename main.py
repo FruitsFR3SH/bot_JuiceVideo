@@ -1,5 +1,5 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, CallbackQueryHandler
 import requests
 
 # Вкажіть свій токен бота
@@ -11,22 +11,23 @@ RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Початкове повідомлення з кнопками та зображенням"""
-    # Надсилаємо зображення з описом
-    image_url = "https://uainet.net/wp-content/uploads/2021/06/tekhnichni-roboty.jpg"
-    caption = "Перед тим як почати користуватись ботом ви повинні підписатись на наші спонсорські канали."
-
-    # Створення кнопок з URL
+    """Привітання користувача та показ кнопок спонсора"""
     keyboard = [
-        [
-            InlineKeyboardButton("Спонсорський бот", url="https://example.com/bot"),
-            InlineKeyboardButton("Спонсорський канал", url="https://example.com/channel"),
-        ]
+        [InlineKeyboardButton("Спонсорський бот", url="https://exemple.com")],
+        [InlineKeyboardButton("Спонсорський канал", url="https://exemple.com")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     # Надсилаємо зображення та кнопки
-    await update.message.reply_photo(photo=image_url, caption=caption, reply_markup=reply_markup)
+    await update.message.reply_photo(
+        photo="https://uainet.net/wp-content/uploads/2021/06/tekhnichni-roboty.jpg",
+        caption="Перед тим як почати користуватись ботом ви повинні підписатись на наші спонсорські канали",
+        reply_markup=reply_markup
+    )
+
+    # Встановлюємо "sponsor_choice" для користувача
+    user_data = context.user_data
+    user_data["sponsor_choice"] = set()
 
 async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробка вибору спонсора"""
@@ -37,10 +38,14 @@ async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TY
     user_data = context.user_data
     choice = query.data
 
+    # Додаємо вибір до списку
     if "sponsor_choice" not in user_data:
         user_data["sponsor_choice"] = set()
 
     user_data["sponsor_choice"].add(choice)
+
+    # Логування для перевірки, що зберігається в user_data
+    print("User sponsor choices:", user_data["sponsor_choice"])
 
     # Перевірка, чи натиснуті обидві кнопки
     if len(user_data["sponsor_choice"]) == 2:
@@ -50,13 +55,12 @@ async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TY
         # Якщо не всі кнопки натиснуті, чекаємо
         await query.edit_message_text("Будь ласка, підпишіться на всі спонсорські канали, щоб почати користуватися ботом.")
 
-    # Повідомлення для користувача
-    await query.message.reply_text("Надішліть посилання на відео з TikTok, і я завантажу його для вас.")
-
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
     # Перевірка, чи користувач вибрав обидві кнопки
     user_data = context.user_data
+    print("User sponsor choices at video download:", user_data.get("sponsor_choice", set()))
+
     if "sponsor_choice" not in user_data or len(user_data["sponsor_choice"]) != 2:
         await update.message.reply_text("Ви повинні підписатися на всі спонсорські канали перед завантаженням відео.")
         return
@@ -107,10 +111,8 @@ if __name__ == "__main__":
 
     # Обробники команд
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
-    
-    # Обробник для вибору спонсора
     app.add_handler(CallbackQueryHandler(handle_sponsor_choice))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
 
     # Запуск бота
     print("Бот запущено...")
