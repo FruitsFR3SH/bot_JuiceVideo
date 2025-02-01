@@ -36,14 +36,9 @@ async def check_subscription(user_id: int, chat_id: str, context: ContextTypes.D
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Привітання користувача та показ кнопок спонсора"""
     keyboard = [
-        [
-            InlineKeyboardButton("Спонсорський бот", url=SPONSORS['bot']['url']),
-            InlineKeyboardButton("✅ Перевірити підписку на бота", callback_data='check_bot')
-        ],
-        [
-            InlineKeyboardButton("Спонсорський канал", url=SPONSORS['channel']['url']),
-            InlineKeyboardButton("✅ Перевірити підписку на канал", callback_data='check_channel')
-        ]
+        [InlineKeyboardButton("Спонсорський бот", url=SPONSORS['bot']['url'])],
+        [InlineKeyboardButton("Спонсорський канал", url=SPONSORS['channel']['url'])],
+        [InlineKeyboardButton("✅ Перевірити підписки", callback_data='check_all')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -58,35 +53,34 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sponsor_choices[update.message.from_user.id] = set()
 
 async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробка перевірки підписки"""
+    """Обробка перевірки всіх підписок"""
     query = update.callback_query
     await query.answer()
     
     user_id = query.from_user.id
     
-    if query.data == 'check_bot':
-        is_subscribed = await check_subscription(user_id, SPONSORS['bot']['chat_id'], context)
-        if is_subscribed:
-            sponsor_choices[user_id].add('bot')
-    elif query.data == 'check_channel':
-        is_subscribed = await check_subscription(user_id, SPONSORS['channel']['chat_id'], context)
-        if is_subscribed:
-            sponsor_choices[user_id].add('channel')
+    # Перевіряємо обидві підписки
+    is_bot_subscribed = await check_subscription(user_id, SPONSORS['bot']['chat_id'], context)
+    is_channel_subscribed = await check_subscription(user_id, SPONSORS['channel']['chat_id'], context)
 
-    # Перевірка всіх підписок
-    if len(sponsor_choices.get(user_id, set())) == 2:
-        await query.edit_message_caption(
-            caption="Дякуємо за підписку! Тепер ви можете надсилати посилання для завантаження відео."
+    if is_bot_subscribed and is_channel_subscribed:
+        # Якщо користувач підписаний на обидва ресурси
+        await query.message.delete()  # Видаляємо повідомлення з кнопками
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="✅ Дякуємо за підписку! Тепер ви можете надсилати посилання для завантаження відео."
         )
     else:
+        # Формуємо повідомлення про відсутні підписки
         missing = []
-        if 'bot' not in sponsor_choices.get(user_id, set()):
+        if not is_bot_subscribed:
             missing.append("бота")
-        if 'channel' not in sponsor_choices.get(user_id, set()):
+        if not is_channel_subscribed:
             missing.append("канал")
         
-        await query.edit_message_caption(
-            caption=f"Будь ласка, підпишіться на {' та '.join(missing)} і натисніть відповідні кнопки перевірки."
+        await query.answer(
+            f"Ви не підписані на {' та '.join(missing)}! Спочатку підпишіться.",
+            show_alert=True
         )
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
