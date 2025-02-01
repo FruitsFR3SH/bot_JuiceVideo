@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 import requests
 
 # Вкажіть свій токен бота
@@ -91,7 +91,9 @@ if __name__ == "__main__":
     # Обробники команд
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
-    app.add_handler(MessageHandler(filters.CallbackQuery, handle_sponsor_choice))
+    
+    # Обробник для вибору спонсора
+    app.add_handler(CallbackQueryHandler(handle_sponsor_choice))
 
     # Запуск бота
     print("Бот запущено...")
