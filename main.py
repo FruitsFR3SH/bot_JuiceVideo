@@ -3,25 +3,25 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 import requests
 
 # Вкажіть свій токен бота
-BOT_TOKEN = "7141362441:AAFm-ckIy2L51KHzgZ_w3USxMVW9Oo8NM3Q"
+BOT_TOKEN = "YOUR_BOT_TOKEN"
 
 # Параметри RapidAPI
-RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
+RAPIDAPI_KEY = "YOUR_RAPIDAPI_KEY"
 RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
-# Список користувачів, які пройшли перевірку підписки
-subscribed_users = set()
+# Список користувачів, які натиснули на спонсорські кнопки
+users_clicked_buttons = set()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Відображає повідомлення з кнопками для підписки"""
+    """Відображає повідомлення з кнопками для спонсорських посилань"""
     keyboard = [
         [
-            InlineKeyboardButton("Спонсорський бот", url="https://your-sponsor-bot-link.com"),
-            InlineKeyboardButton("Спонсорський канал", url="https://your-sponsor-channel-link.com")
+            InlineKeyboardButton("Спонсорський бот", url="https://your-sponsor-bot-link.com", callback_data="sponsor_bot_clicked"),
+            InlineKeyboardButton("Спонсорський канал", url="https://your-sponsor-channel-link.com", callback_data="sponsor_channel_clicked")
         ],
         [
-            InlineKeyboardButton("Перевірити підписку", callback_data="check_subscription")
+            InlineKeyboardButton("Перевірити підписки", callback_data="check_subscription")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -31,22 +31,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+async def button_click_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробляє натискання спонсорських кнопок"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    users_clicked_buttons.add(user_id)
+    await query.edit_message_text(text="Дякуємо за натискання спонсорських кнопок! Тепер натисніть 'Перевірити підписки'.")
+
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Перевіряє підписку користувача"""
+    """Перевіряє, чи натиснув користувач на спонсорські кнопки"""
     query = update.callback_query
     await query.answer()
 
     user_id = query.from_user.id
-    # Тут можна додати реальну перевірку підписки, але для прикладу просто додаємо користувача до списку
-    subscribed_users.add(user_id)
-    await query.edit_message_text(text="Дякуємо за підписку! Тепер ви можете завантажувати відео.")
+
+    if user_id in users_clicked_buttons:
+        await query.edit_message_text(text="Дякуємо за підписку! Тепер ви можете завантажувати відео.")
+    else:
+        await query.edit_message_text(text="Ви повинні натиснути на спонсорські кнопки перед перевіркою. Використайте команду /start для початку.")
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
     user_id = update.message.from_user.id
 
-    if user_id not in subscribed_users:
-        await update.message.reply_text("Ви повинні підписатись на спонсорські канали перед завантаженням відео. Використайте команду /start для початку.")
+    if user_id not in users_clicked_buttons:
+        await update.message.reply_text("Ви повинні натиснути на спонсорські кнопки перед завантаженням відео. Використайте команду /start для початку.")
         return
 
     url = update.message.text.strip()
@@ -95,6 +106,8 @@ if __name__ == "__main__":
 
     # Обробники команд
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(button_click_handler, pattern="sponsor_bot_clicked"))
+    app.add_handler(CallbackQueryHandler(button_click_handler, pattern="sponsor_channel_clicked"))
     app.add_handler(CallbackQueryHandler(check_subscription, pattern="check_subscription"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
 
