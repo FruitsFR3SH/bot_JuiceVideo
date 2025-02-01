@@ -7,8 +7,8 @@ BOT_TOKEN = "7801596549:AAGv39K8HhEOTN6jf5dEs74lBT3qkJ083IE"
 
 # Параметри RapidAPI
 RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
-RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
-RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
+RAPIDAPI_HOST = "auto-download-all-in-one-big.p.rapidapi.com"
+RAPIDAPI_URL = "https://auto-download-all-in-one-big.p.rapidapi.com/v1/social/autolink"
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
