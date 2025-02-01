@@ -20,8 +20,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [
-            InlineKeyboardButton("Спонсорський бот", url="https://t.me/your_sponsor_bot"),  # Заміни на реальне посилання на спонсорського бота
-            InlineKeyboardButton("Спонсорський канал", url="https://t.me/your_sponsor_channel")  # Заміни на реальне посилання на спонсорський канал
+            InlineKeyboardButton("Спонсорський бот", callback_data="bot"),
+            InlineKeyboardButton("Спонсорський канал", callback_data="channel")
         ],
         [
             InlineKeyboardButton("Перевірити підписки", callback_data="check_subscriptions")
