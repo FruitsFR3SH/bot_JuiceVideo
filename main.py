@@ -1,65 +1,59 @@
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-import requests
+import http.client
+import json
+import telebot
 
-# Вкажіть свій токен бота
-BOT_TOKEN = "7801596549:AAGv39K8HhEOTN6jf5dEs74lBT3qkJ083IE"
+# Токен вашого Telegram-бота
+token = "7141362441:AAFm-ckIy2L51KHzgZ_w3USxMVW9Oo8NM3Q"
+bot = telebot.TeleBot(token)
 
-# Параметри RapidAPI
-RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
-RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
-RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
+# Дані API
+API_HOST = "social-download-all-in-one.p.rapidapi.com"
+API_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
 
-async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробляє посилання на відео і завантажує його"""
-    url = update.message.text.strip()
+# Функція для отримання відео
+def get_video_data(video_url):
+    conn = http.client.HTTPSConnection(API_HOST)
+    payload = json.dumps({"url": video_url})
+    headers = {
+        'x-rapidapi-key': API_KEY,
+        'x-rapidapi-host': API_HOST,
+        'Content-Type': "application/json"
+    }
+    conn.request("POST", "/v1/social/autolink", payload, headers)
+    res = conn.getresponse()
+    data = res.read()
+    return json.loads(data.decode("utf-8"))
 
-    # Перевірка на коректність посилання
-    if not (url.startswith("https://www.tiktok.com/") or url.startswith("https://vm.tiktok.com/")):
-        await update.message.reply_text("Будь ласка, надішліть дійсне посилання на TikTok.")
+# Обробник команди /start
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "Відправ мені посилання на відео, і я знайду його для тебе!")
+
+# Обробник повідомлень із посиланнями
+@bot.message_handler(func=lambda message: message.text.startswith("http"))
+def send_video(message):
+    bot.reply_to(message, "Зачекай, шукаю відео...")
+    video_data = get_video_data(message.text)
+    
+    if video_data.get("error"):
+        bot.reply_to(message, "Не вдалося отримати відео. Спробуй інше посилання!")
         return
+    
+    title = video_data.get("title", "Без назви")
+    author = video_data.get("author", "Невідомий автор")
+    thumbnail = video_data.get("thumbnail")
+    medias = video_data.get("medias", [])
+    
+    if not medias:
+        bot.reply_to(message, "Не вдалося знайти медіафайли для цього відео.")
+        return
+    
+    video_url = medias[0].get("url")  # Беремо перше доступне відео
+    quality = medias[0].get("quality", "Невідомо")
+    
+    response_text = f"🎬 *{title}*\n👤 {author}\n📺 Якість: {quality}\n\n[🔗 Завантажити відео]({video_url})"
+    
+    bot.send_photo(message.chat.id, thumbnail, caption=response_text, parse_mode="Markdown")
 
-    try:
-        # Дані для запиту
-        payload = {"url": url}
-        headers = {
-            "x-rapidapi-key": RAPIDAPI_KEY,
-            "x-rapidapi-host": RAPIDAPI_HOST,
-            "Content-Type": "application/json",
-        }
-
-        # Виконання запиту до RapidAPI
-        response = requests.post(RAPIDAPI_URL, json=payload, headers=headers)
-        response_data = response.json()
-
-        # Логування відповіді для діагностики
-        print("API Response:", response_data)
-
-        # Перевірка на успішність запиту
-        if response.status_code == 200 and "medias" in response_data:
-            medias = response_data["medias"]
-            video_url = next((media["url"] for media in medias if media["extension"] == "mp4"), None)
-
-            if video_url:
-                await update.message.reply_video(video_url, caption="Ось ваше відео з TikTok!")
-            else:
-                await update.message.reply_text("На жаль, не вдалося знайти відео.")
-        else:
-            error_message = response_data.get("message", "Не вдалося завантажити відео.")
-            await update.message.reply_text(f"Помилка: {error_message}")
-    except Exception as e:
-        await update.message.reply_text(
-            f"Сталася помилка при завантаженні відео: {e}"
-        )
-
-if __name__ == "__main__":
-    # Створення додатку
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    # Обробники команд
-    # Видалено обробник для команди /start
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
-
-    # Запуск бота
-    print("Бот запущено...")
-    app.run_polling()
+# Запуск бота
+bot.polling(none_stop=True)
