@@ -16,8 +16,8 @@ sponsor_choices = {}
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Привітання користувача та показ кнопок спонсора"""
     keyboard = [
-        [InlineKeyboardButton("Спонсорський бот", callback_data="bot")],
-        [InlineKeyboardButton("Спонсорський канал", callback_data="channel")]
+        [InlineKeyboardButton("Спонсорський бот", url="https://example.com/bot")],
+        [InlineKeyboardButton("Спонсорський канал", url="https://example.com/channel")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
