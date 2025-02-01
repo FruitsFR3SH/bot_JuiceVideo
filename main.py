@@ -1,31 +1,19 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 import requests
 
 # Вкажіть свій токен бота
-BOT_TOKEN = "7801596549:AAGv39K8HhEOTN6jf5dEs74lBT3qkJ083IE"
+BOT_TOKEN = "7141362441:AAFm-ckIy2L51KHzgZ_w3USxMVW9Oo8NM3Q"
 
 # Параметри RapidAPI
 RAPIDAPI_KEY = "bab1d69d47msh7571cc673e498c4p16f95djsn5bc443eeec97"
 RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
-# Ваша логіка для перевірки підписок
+# Функція перевірки підписки
 async def check_subscriptions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Перевірка підписок на канал та бота"""
-    # Запит на перевірку підписок
+    """Надсилає зображення і кнопки для перевірки підписок"""
     user_id = update.message.from_user.id
-    # Приклад перевірки підписок
-    # Тут має бути ваша логіка для перевірки підписки на канал або бота
-    # Можна використати Telegram API для перевірки підписки
-    is_subscribed_to_channel = True  # Псевдоперевірка
-    if not is_subscribed_to_channel:
-        await update.message.reply_text("Ви повинні підписатись на спонсорський канал, щоб продовжити!")
-        return
-    
-    # Надсилаємо зображення з описом перед кнопками
-    photo_url = "https://uainet.net/wp-content/uploads/2021/06/tekhnichni-roboty.jpg"
-    caption = "Перед тим як почати користуватись ботом, ви повинні підписатись на наші спонсорські канали."
     keyboard = [
         [
             InlineKeyboardButton("Спонсорський бот", url="https://t.me/your_sponsor_bot"),
@@ -36,9 +24,33 @@ async def check_subscriptions(update: Update, context: ContextTypes.DEFAULT_TYPE
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-
-    # Надсилаємо зображення з текстом
+    
+    # Надсилаємо зображення та текст перед кнопками
+    photo_url = "https://uainet.net/wp-content/uploads/2021/06/tekhnichni-roboty.jpg"
+    caption = "Перед тим як почати користуватись ботом, ви повинні підписатись на наші спонсорські канали."
+    
     await update.message.reply_photo(photo=photo_url, caption=caption, reply_markup=reply_markup)
+
+# Обробник натискання кнопки для перевірки підписок
+async def handle_subscription_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробляє натискання на кнопку перевірки підписок"""
+    query = update.callback_query
+    await query.answer()
+
+    # Перевірка підписки на канал (замість цього потрібно реалізувати вашу перевірку)
+    user_id = query.from_user.id
+    # Приклад перевірки підписки на канал:
+    try:
+        # Приклад перевірки підписки на канал
+        # Використовуємо API для перевірки підписки
+        is_subscribed = True  # Це має бути реальна перевірка через API Telegram
+        if is_subscribed:
+            await query.edit_message_text("Підписка підтверджена! Тепер ви можете завантажувати відео.")
+            await query.message.reply_text("Надішліть посилання на відео, яке хочете завантажити.")
+        else:
+            await query.edit_message_text("Ви не підписались на канал. Будь ласка, підпишіться і спробуйте ще раз.")
+    except Exception as e:
+        await query.edit_message_text(f"Сталася помилка при перевірці підписки: {e}")
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
@@ -87,9 +99,9 @@ if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     # Обробники команд
-    # Видалено обробник для команди /start
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
     app.add_handler(CommandHandler("start", check_subscriptions))  # Викликаємо функцію перевірки підписок
+    app.add_handler(CallbackQueryHandler(handle_subscription_check, pattern="check_subscriptions"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
 
     # Запуск бота
     print("Бот запущено...")
