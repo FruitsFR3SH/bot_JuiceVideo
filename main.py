@@ -4,7 +4,7 @@ from telegram import Bot, Update
 from telegram.ext import CommandHandler, MessageHandler, filters, ApplicationBuilder
 
 # Токен вашого Telegram-бота
-token = "7141362441:AAFm-ckIy2L51KHzgZ_w3USxMVW9Oo8NM3Q"
+token = "token"
 bot = Bot(token)
 
 # Дані API
