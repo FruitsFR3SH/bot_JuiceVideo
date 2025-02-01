@@ -11,7 +11,7 @@ RAPIDAPI_HOST = "auto-download-all-in-one.p.rapidapi.com"
 RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autolink"
 
 # Словник для відстеження підписок користувачів
-sponsor_choices = {}
+verified_users = set()
 
 # Дані про спонсорські ресурси
 SPONSORS = {
@@ -25,6 +25,11 @@ SPONSORS = {
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Привітання користувача та показ кнопок спонсора"""
+    user_id = update.message.from_user.id
+    # При старті видаляємо користувача зі списку верифікованих
+    if user_id in verified_users:
+        verified_users.remove(user_id)
+    
     keyboard = [
         [InlineKeyboardButton("Спонсорський бот", url=SPONSORS['bot']['url'])],
         [InlineKeyboardButton("Спонсорський канал", url=SPONSORS['channel']['url'])],
@@ -44,6 +49,9 @@ async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TY
     user_id = query.from_user.id
     
     if query.data == 'check_all':
+        # Додаємо користувача до верифікованих
+        verified_users.add(user_id)
+        
         # Видаляємо повідомлення з кнопками і надсилаємо підтвердження
         await query.message.delete()
         await context.bot.send_message(
@@ -55,6 +63,15 @@ async def handle_sponsor_choice(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
+    user_id = update.message.from_user.id
+    
+    # Перевіряємо чи користувач верифікований
+    if user_id not in verified_users:
+        await update.message.reply_text(
+            "Ви повинні спочатку підписатися на спонсорські канали та натиснути кнопку перевірки. Використайте /start для отримання інструкцій."
+        )
+        return
+
     url = update.message.text.strip()
 
     # Перевірка на коректність посилання
