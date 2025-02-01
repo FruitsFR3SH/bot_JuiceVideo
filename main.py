@@ -13,16 +13,15 @@ RAPIDAPI_URL = "https://auto-download-all-in-one.p.rapidapi.com/v1/social/autoli
 # Змінна для збереження стану натискання кнопок
 user_subscription_status = {}
 
-# Функція перевірки підписки
-async def check_subscriptions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Надсилає зображення і кнопки для перевірки підписок"""
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Надсилає зображення та кнопки для перевірки підписок"""
     user_id = update.message.from_user.id
     user_subscription_status[user_id] = {'bot': False, 'channel': False}
 
     keyboard = [
         [
-            InlineKeyboardButton("Спонсорський бот", url="https://t.me/your_sponsor_bot"),
-            InlineKeyboardButton("Спонсорський канал", url="https://t.me/your_sponsor_channel")
+            InlineKeyboardButton("Спонсорський бот", url="https://t.me/your_sponsor_bot"),  # Заміни на реальне посилання на спонсорського бота
+            InlineKeyboardButton("Спонсорський канал", url="https://t.me/your_sponsor_channel")  # Заміни на реальне посилання на спонсорський канал
         ],
         [
             InlineKeyboardButton("Перевірити підписки", callback_data="check_subscriptions")
@@ -36,38 +35,26 @@ async def check_subscriptions(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     await update.message.reply_photo(photo=photo_url, caption=caption, reply_markup=reply_markup)
 
-# Обробник натискання кнопки для перевірки підписок
-async def handle_subscription_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробляє натискання на кнопку перевірки підписок"""
+async def handle_button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обробляє натискання кнопок спонсорського бота та каналу"""
     query = update.callback_query
     await query.answer()
 
     user_id = query.from_user.id
-    
-    # Перевірка, чи натиснуті обидві кнопки
-    if user_subscription_status.get(user_id):
-        # Якщо натиснуті обидві кнопки, даємо дозвіл на завантаження
+    data = query.data
+
+    if data == "bot":
+        user_subscription_status[user_id]['bot'] = True
+        await query.edit_message_text("Ви натиснули на спонсорський бот!")
+    elif data == "channel":
+        user_subscription_status[user_id]['channel'] = True
+        await query.edit_message_text("Ви натиснули на спонсорський канал!")
+    elif data == "check_subscriptions":
         if user_subscription_status[user_id]['bot'] and user_subscription_status[user_id]['channel']:
             await query.edit_message_text("Підписка підтверджена! Тепер ви можете завантажувати відео.")
             await query.message.reply_text("Надішліть посилання на відео, яке хочете завантажити.")
         else:
             await query.edit_message_text("Ви не натиснули на обидві спонсорські кнопки. Будь ласка, спробуйте ще раз.")
-    else:
-        await query.edit_message_text("Сталася помилка. Спробуйте ще раз.")
-
-# Обробник натискання кнопки спонсорського бота
-async def handle_bot_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробка натискання кнопки спонсорського бота"""
-    user_id = update.callback_query.from_user.id
-    user_subscription_status[user_id]['bot'] = True
-    await update.callback_query.answer("Ви натиснули на спонсорський бот!")
-
-# Обробник натискання кнопки спонсорського каналу
-async def handle_channel_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обробка натискання кнопки спонсорського каналу"""
-    user_id = update.callback_query.from_user.id
-    user_subscription_status[user_id]['channel'] = True
-    await update.callback_query.answer("Ви натиснули на спонсорський канал!")
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
@@ -116,10 +103,8 @@ if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     # Обробники команд
-    app.add_handler(CommandHandler("start", check_subscriptions))  # Викликаємо функцію перевірки підписок
-    app.add_handler(CallbackQueryHandler(handle_subscription_check, pattern="check_subscriptions"))
-    app.add_handler(CallbackQueryHandler(handle_bot_click, pattern="Спонсорський бот"))
-    app.add_handler(CallbackQueryHandler(handle_channel_click, pattern="Спонсорський канал"))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(handle_button_click))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
 
     # Запуск бота
