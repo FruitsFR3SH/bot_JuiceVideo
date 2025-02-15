@@ -52,7 +52,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Сталася помилка при завантаженні відео: {e}"
         )
 
-if name == "main":
+if __name__ == "__main__":
     # Створення додатку
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
