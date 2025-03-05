@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Статистика бота</title>
+    <link rel="stylesheet" href="{{ url_for('stats.static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Статистика бота</h1>
+        <div class="stats-section">
+            <h2>Загальна статистика</h2>
+            <div class="stats-item">Кількість користувачів: {{ stats.users_count }}</div>
+            <div class="stats-item">Надіслано повідомлень: {{ stats.messages_total }}</div>
+            <div class="stats-item">Завантажено відео: {{ stats.videos_total }}</div>
+            <div class="stats-item">Сума донатів: {{ stats.donations_total }}⭐</div>
+        </div>
+        <div class="stats-section">
+            <h2>За останній місяць</h2>
+            <div class="stats-item">Надіслано повідомлень: {{ stats.messages_month }}</div>
+            <div class="stats-item">Завантажено відео: {{ stats.videos_month }}</div>
+            <div class="stats-item">Сума донатів: {{ stats.donations_month }}⭐</div>
+        </div>
+        <a href="{{ url_for('stats.stats_logout') }}" class="logout">Вийти</a>
+    </div>
+</body>
+</html>
