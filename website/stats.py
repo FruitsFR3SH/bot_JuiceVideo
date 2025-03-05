@@ -7,13 +7,7 @@ STATS_PASSWORD = "admin123"
 def password_required(f):
     def decorated_function(*args, **kwargs):
         if 'stats_logged_in' not in session or not session['stats_logged_in']:
-            if request.method == 'POST':
-                password = request.form.get('password')
-                if password == STATS_PASSWORD:
-                    session['stats_logged_in'] = True
-                    return f(*args, **kwargs)
-                return render_template('stats_login.html', error="Невірний пароль")
-            return render_template('stats_login.html')
+            return redirect(url_for('stats.stats_login'))  # Перенаправлення на логін
         return f(*args, **kwargs)
     return decorated_function
 
@@ -27,13 +21,12 @@ def stats_login():
         return render_template('stats_login.html', error="Невірний пароль")
     return render_template('stats_login.html')
 
-@stats_bp.route('/dashboard')
+@stats_bp.route('/dashboard', methods=['GET'])  # Явно вказуємо GET
 @password_required
 def stats_dashboard():
     context = request.bot_context
     month_ago = datetime.now() - timedelta(days=30)
     
-    # Перевірка даних
     print("Bot data:", context.bot_data)  # Відладковий вивід
     
     videos_all = context.bot_data.get("videos_downloaded", [])
@@ -54,7 +47,7 @@ def stats_dashboard():
     }
     return render_template('stats_dashboard.html', stats=stats)
 
-@stats_bp.route('/logout')
+@stats_bp.route('/logout', methods=['GET'])
 def stats_logout():
     session.pop('stats_logged_in', None)
     return redirect(url_for('stats.stats_login'))
