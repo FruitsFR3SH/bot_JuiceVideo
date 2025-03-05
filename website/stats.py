@@ -33,6 +33,9 @@ def stats_dashboard():
     context = request.bot_context
     month_ago = datetime.now() - timedelta(days=30)
     
+    # Перевірка даних
+    print("Bot data:", context.bot_data)  # Відладковий вивід
+    
     videos_all = context.bot_data.get("videos_downloaded", [])
     videos_month = [t for t in videos_all if t > month_ago]
     messages_all = context.bot_data.get("messages", [])
@@ -46,8 +49,8 @@ def stats_dashboard():
         "messages_month": len(messages_month),
         "videos_total": len(videos_all),
         "videos_month": len(videos_month),
-        "donations_total": sum(d["amount"] for d in donations_all),
-        "donations_month": sum(d["amount"] for d in donations_month)
+        "donations_total": sum(d["amount"] for d in donations_all) if donations_all else 0,
+        "donations_month": sum(d["amount"] for d in donations_month) if donations_month else 0
     }
     return render_template('stats_dashboard.html', stats=stats)
 
