@@ -3,7 +3,7 @@ from messeges.start import start, button_handler
 from messeges.classic import handle_text
 from messeges.tech_works import tech_works
 from messeges.donate import handle_donate, process_donation, precheckout_callback
-from website.stats import stats_bp  # Змінено з 'site' на 'website'
+from website.stats import stats_bp
 from flask import Flask, session
 import threading
 
@@ -20,11 +20,17 @@ def run_flask(bot_context):
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+    # Ініціалізація базових значень для статистики
+    app.bot_data.setdefault("videos_downloaded", [])
+    app.bot_data.setdefault("messages", [])
+    app.bot_data.setdefault("users", {})
+    app.bot_data.setdefault("total_donations", [])
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(CallbackQueryHandler(button_handler, pattern="check_subscriptions"))
-    app.add_handler(CallbackQueryHandler(process_donation, pattern=r"donate_\d+"))  # Спочатку обробка сум
-    app.add_handler(CallbackQueryHandler(handle_donate, pattern="donate"))         # Потім "donate"
+    app.add_handler(CallbackQueryHandler(process_donation, pattern=r"donate_\d+"))
+    app.add_handler(CallbackQueryHandler(handle_donate, pattern="donate"))
     app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
 
     flask_thread = threading.Thread(target=run_flask, args=(app,))
