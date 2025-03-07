@@ -3,13 +3,9 @@ from telegram.ext import ContextTypes
 from system.download import download_video
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from messeges.start import start
-from datetime import datetime
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє текстові повідомлення"""
-    # Додаємо повідомлення до статистики
-    context.bot_data.setdefault("messages", []).append(datetime.now())
-    
     if not context.user_data.get("subscription_checked", False):
         await start(update, context)
         return
