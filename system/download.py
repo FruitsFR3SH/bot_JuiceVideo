@@ -11,7 +11,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return False
 
     try:
-        api_url = f"https://videodownloadapi-production.up.railway.app/download?url={url}"
+        api_url = f"api.juicesave.infy.uk/download?url={url}"
         response = requests.get(api_url, allow_redirects=True)
 
         if response.status_code == 200:
