@@ -1,10 +1,8 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CallbackContext
-from database import add_user  # Додаємо імпорт
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє команду /start"""
-    add_user(update.message.from_user.id)  # Додаємо користувача
     welcome_text = (
         "❗️Перед тим як почати користуватись ботом ви повинні підписатись на спонсорський контент"
     )
