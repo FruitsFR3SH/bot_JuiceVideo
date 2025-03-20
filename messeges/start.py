@@ -48,7 +48,7 @@ async def button_handler(update: Update, context: CallbackContext):
         )
         keyboard = [
             [InlineKeyboardButton("Пан Мемасюк", url="https://t.me/memasyk_ua")],
-            [InlineKeyboardButton("JuiceProjects", url="https://t.me/Juice_Project_Newshttps://t.me/sponsor2")],
+            [InlineKeyboardButton("JuiceProjects", url="https://t.me/Juice_Project_News")],
             [InlineKeyboardButton("Спонсор", url="https://t.me/kittyverse_ai_bot/play?startapp=u1310633045")],
             [InlineKeyboardButton("Перевірити підписки✅", callback_data="check_subscriptions")],
         ]
