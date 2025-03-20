@@ -1,7 +1,6 @@
 import requests
 from telegram import Update
 from telegram.ext import ContextTypes
-from database import add_download  # Додаємо імпорт
 
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обробляє посилання на відео і завантажує його"""
@@ -18,7 +17,6 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if response.status_code == 200:
             video_url = response.url
             await update.message.reply_video(video_url, caption="Ось ваше відео!")
-            add_download(update.message.from_user.id)  # Додаємо завантаження
             return True
         else:
             await update.message.reply_text(f"Помилка: сервер повернув статус {response.status_code}.")
