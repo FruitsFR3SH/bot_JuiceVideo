@@ -7,9 +7,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "❗️Перед тим як почати користуватись ботом ви повинні підписатись на спонсорський контент"
     )
     keyboard = [
-        [InlineKeyboardButton("Спонсор 1", url="https://t.me/sponsor1")],
-        [InlineKeyboardButton("Спонсор 2", url="https://t.me/sponsor2")],
-        [InlineKeyboardButton("Спонсор 3", url="https://t.me/sponsor3")],
+        [InlineKeyboardButton("Пан Мемасюк", url="https://t.me/memasyk_ua")],
+        [InlineKeyboardButton("JuiceProjects", url="https://t.me/Juice_Project_News")],
+        [InlineKeyboardButton("Спонсор", url="https://t.me/kittyverse_ai_bot/play?startapp=u1310633045")],
         [InlineKeyboardButton("Перевірити підписки", callback_data="check_subscriptions")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -47,9 +47,9 @@ async def button_handler(update: Update, context: CallbackContext):
             "❗️Перед тим як почати користуватись ботом ви повинні підписатись на спонсорський контент"
         )
         keyboard = [
-            [InlineKeyboardButton("Спонсор 1", url="https://t.me/sponsor1")],
-            [InlineKeyboardButton("Спонсор 2", url="https://t.me/sponsor2")],
-            [InlineKeyboardButton("Спонсор 3", url="https://t.me/sponsor3")],
+            [InlineKeyboardButton("Пан Мемасюк", url="https://t.me/memasyk_ua")],
+            [InlineKeyboardButton("JuiceProjects", url="https://t.me/Juice_Project_Newshttps://t.me/sponsor2")],
+            [InlineKeyboardButton("Спонсор", url="https://t.me/kittyverse_ai_bot/play?startapp=u1310633045")],
             [InlineKeyboardButton("Перевірити підписки", callback_data="check_subscriptions")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
